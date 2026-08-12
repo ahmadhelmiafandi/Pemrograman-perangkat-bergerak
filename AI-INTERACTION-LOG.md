@@ -1,6 +1,6 @@
-# AI Interaction Log — Assignment 1 Task Tracker Core
+# AI Interaction Log — Assignment 2 Task Tracker Core
 
-Dokumen ini mencatat log interaksi dengan AI selama pengerjaan Assignment 1: Task Tracker Core sesuai dengan kebijakan penggunaan AI pada matakuliah Pengembangan Perangkat Bergerak.
+Dokumen ini mencatat log interaksi dengan AI selama pengerjaan Assignment 1 dan Assignment 2 (P04 SQLite & P05 REST API) sesuai dengan kebijakan penggunaan AI pada matakuliah Pengembangan Perangkat Bergerak.
 
 ---
 
@@ -58,4 +58,43 @@ Dokumen ini mencatat log interaksi dengan AI selama pengerjaan Assignment 1: Tas
   - **Alasan Penolakan:** Membandingkan langsung dengan `DateTime.now()` akan menolak tanggal hari ini karena komponen jam/menit/detik dari `DateTime.now()` lebih besar dari waktu pilih tanggal jam 00:00. Pembandingan harus dilakukan murni pada level tanggal (`year, month, day`).
 - **Verifikasi Pemahaman:**
   - *Penjelasan:* Pembentukan `DateTime(y, m, d)` menghilangkan offset waktu (jam/menit/detik), sehingga memilih tanggal hari ini dihitung valid (bukan masa lalu).
-  - *Bukti:* Form menolak tanggal kemarin saat mode Tambah Task dan menerima tanggal hari ini maupun tanggal mendatang.
+  - *Bukti:* Form menolak tanggal kemarin saat buat task baru dan menerima tanggal hari ini.
+
+---
+
+## Log Interaksi 4: Perancangan Data Layer SQLite & TaskMapper (P04 - Jalur B)
+
+- **Tujuan:** Mengonversi tipe data Dart (`DateTime`, `TaskPriority` enum, `bool`) ke tipe data SQLite `Map<String, Object?>` secara eksplisit dan konsisten.
+- **Prompt yang Digunakan:**
+  > "Bagaimana cara merancang `TaskMapper.toRow` dan `TaskMapper.fromRow` di SQLite agar tipe boolean `isCompleted` disimpan sebagai Integer 0/1, `priority` sebagai String nama enum, dan `dueDate` sebagai ISO-8601 string tanpa ada kehilangan data (*lossless round-trip*)?"
+- **Ringkasan Respons AI:**
+  AI menyarankan penggunaan `toIso8601String()` dan `DateTime.parse()` untuk tanggal, `.name` dan `byName()` untuk enum, serta operator kondisi `isCompleted ? 1 : 0` dan `(row[...] as int) != 0` untuk boolean.
+- **Perubahan yang Dipilih / Diterapkan:**
+  - Membuat `TaskMapper` dengan `toRow` dan `fromRow` sesuai saran AI.
+  - Menulis `task_mapper_test.dart` untuk memverifikasi *round-trip data integrity*.
+- **Perubahan yang Ditolak & Alasan:**
+  - AI sempat menyarankan untuk mengonversi `isCompleted` menjadi String `'true'` / `'false'`.
+  - **Alasan Penolakan:** SQLite tidak memiliki tipe boolean native. Menyimpan boolean sebagai String akan merusak query SQL `WHERE is_completed = 1` dan menyebabkan error parsing tipe. Integer 0/1 adalah standar konvensi SQLite.
+- **Verifikasi Pemahaman:**
+  - *Penjelasan:* `toRow` memetakan tipe Dart ke representasi SQLite; `fromRow` mengembalikan ke objek `Task`. Pemrosesan integer 0/1 konsisten di kedua arah.
+  - *Bukti:* `flutter test test/task_mapper_test.dart` dan `flutter test test/local_task_datasource_test.dart` lulus 100%.
+
+---
+
+## Log Interaksi 5: Perancangan Repository Koordinator Offline-First (Assignment 2)
+
+- **Tujuan:** Merangkai `OfflineFirstTaskRepository` yang menggabungkan SQLite (Local Source of Truth) dan REST API / Mock RemoteDatasource tanpa crash saat offline.
+- **Prompt yang Digunakan:**
+  > "Bagaimana cara merancang `OfflineFirstTaskRepository` agar saat `save(Task task)` dipanggil, data selalu disimpan ke SQLite lokal terlebih dahulu, lalu dikirim ke REST API? Jika REST API melempar `NetworkError` atau HTTP 500, bagaimana menagkapnya agar simpan lokal tetap sukses dan status `isOffline` bernilai true?"
+- **Ringkasan Respons AI:**
+  AI menyarankan alur eksekusi sekuensial: simpan lokal (SQLite) $\rightarrow$ try kirim remote $\rightarrow$ catch `ApiError` / `Exception` $\rightarrow$ set `_isOffline = true` tanpa melempar exception ke UI.
+- **Perubahan yang Dipilih / Diterapkan:**
+  - Membuat `OfflineFirstTaskRepository` dengan pola sekuensial tersebut.
+  - Menambahkan chip indikator status sync `ONLINE` / `OFFLINE (SQLite)` di AppBar `TaskListScreen`.
+  - Menulis unit test `test/offline_first_task_repository_test.dart`.
+- **Perubahan yang Ditolak & Alasan:**
+  - AI sempat menyarankan pemanggilan auto-retry terus menerus dalam loop tanpa batas saat remote gagal.
+  - **Alasan Penolakan:** Auto-retry tanpa batas boros daya dan membebani thread. Spesifikasi Assignment 2 mewajibkan *manual retry* yang dipicu secara eksplisit oleh pengguna melalui tombol **Retry** atau pull-to-refresh.
+- **Verifikasi Pemahaman:**
+  - *Penjelasan:* Karena SQLite adalah *Local Source of Truth*, penulisan lokal menjamin data tersimpan persisten. Error remote yang ditangkap mencegah aplikasi crash dan mengabarkan status offline ke UI secara transparan.
+  - *Bukti:* Unit test `offline_first_task_repository_test.dart` lulus 100% dan simulasi network error berjalan aman tanpa crash.

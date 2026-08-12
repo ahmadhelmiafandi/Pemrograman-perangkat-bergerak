@@ -1,19 +1,22 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/errors/api_error.dart';
+import '../../data/repositories/offline_first_task_repository.dart';
+import '../../data/repositories/task_repository.dart';
 import '../../domain/task.dart';
 
 /// State manajemen task dengan [ChangeNotifier].
 ///
-/// PERHATIAN (P03): metode CRUD (add/update/delete/toggle) sengaja dibuat
-/// **no-op** sebagai TODO inti. Implementasikan sampai semua test di
-/// `test/task_provider_test.dart` menjadi hijau. Lihat README checkpoint.
-///
-/// Konvensi state:
-/// - [_tasks] sumber data reaktif.
-/// - [_isLoading] untuk loading state UI.
-/// - [_error] != null => error state UI (dengan retry).
+/// Mendukung penyimpanan persisten (SQLite/REST API) via [TaskRepository] serta
+/// penanganan error state UI terstruktur.
 class TaskProvider extends ChangeNotifier {
-  TaskProvider({List<Task> initialTasks = const []}) : _tasks = initialTasks;
+  TaskProvider({
+    TaskRepository? repository,
+    List<Task> initialTasks = const [],
+  })  : _repo = repository,
+        _tasks = initialTasks;
+
+  final TaskRepository? _repo;
 
   List<Task> _tasks;
   bool _isLoading = false;
@@ -29,6 +32,24 @@ class TaskProvider extends ChangeNotifier {
   String? get error => _error;
 
   int get count => _tasks.length;
+
+  /// Menandakan apakah repository berada dalam mode offline / lokal-only.
+  bool get isOfflineMode {
+    final repo = _repo;
+    if (repo is OfflineFirstTaskRepository) {
+      return repo.isOffline;
+    }
+    return false;
+  }
+
+  /// Membalik simulasi error jaringan (khusus mode Mock) dan memuat ulang task.
+  Future<void> toggleSimulateNetworkError() async {
+    final repo = _repo;
+    if (repo is OfflineFirstTaskRepository) {
+      repo.toggleSimulateNetworkError();
+      await loadTasks();
+    }
+  }
 
   // --- Search & Filter getters ---
   String get searchQuery => _searchQuery;
@@ -65,16 +86,21 @@ class TaskProvider extends ChangeNotifier {
     return null;
   }
 
-  /// Memuat data awal. Sumber data persisten (SQLite) datang di P04; untuk
-  /// P03 cukup seed dummy. Method ini TIDAK termasuk TODO inti.
+  /// Memuat data dari repositori dengan penanganan [ApiError].
   Future<void> loadTasks() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      _tasks = Task.getDummyTasks();
+      if (_repo != null) {
+        _tasks = await _repo.getAll();
+      } else {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        _tasks = Task.getDummyTasks();
+      }
+    } on ApiError catch (e) {
+      _error = e.message;
     } catch (e) {
       _error = 'Failed to load tasks: $e';
     } finally {
@@ -83,36 +109,94 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  // ---- CRUD inti -----------------------------------------------------------
+  // ---- CRUD persisten -------------------------------------------------------
 
-  /// Menambahkan task baru ke daftar.
-  void addTask(Task task) {
-    _tasks = [..._tasks, task];
-    notifyListeners();
+  /// Menambahkan task baru ke repositori dan menyegarkan state.
+  Future<void> addTask(Task task) async {
+    _error = null;
+    try {
+      if (_repo != null) {
+        await _repo.save(task);
+        await loadTasks();
+      } else {
+        _tasks = [..._tasks, task];
+        notifyListeners();
+      }
+    } on ApiError catch (e) {
+      _error = e.message;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to add task: $e';
+      notifyListeners();
+    }
   }
 
-  /// Memperbarui task yang sudah ada (dicocokkan berdasarkan id).
-  void updateTask(Task task) {
-    _tasks = [
-      for (final t in _tasks)
-        if (t.id == task.id) task else t,
-    ];
-    notifyListeners();
+  /// Memperbarui task yang sudah ada di repositori dan menyegarkan state.
+  Future<void> updateTask(Task task) async {
+    _error = null;
+    try {
+      if (_repo != null) {
+        await _repo.save(task);
+        await loadTasks();
+      } else {
+        _tasks = [
+          for (final t in _tasks)
+            if (t.id == task.id) task else t,
+        ];
+        notifyListeners();
+      }
+    } on ApiError catch (e) {
+      _error = e.message;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to update task: $e';
+      notifyListeners();
+    }
   }
 
-  /// Menghapus task berdasarkan [id].
-  void deleteTask(String id) {
-    _tasks = _tasks.where((t) => t.id != id).toList();
-    notifyListeners();
+  /// Menghapus task berdasarkan [id] dari repositori.
+  Future<void> deleteTask(String id) async {
+    _error = null;
+    try {
+      if (_repo != null) {
+        await _repo.remove(id);
+        await loadTasks();
+      } else {
+        _tasks = _tasks.where((t) => t.id != id).toList();
+        notifyListeners();
+      }
+    } on ApiError catch (e) {
+      _error = e.message;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to delete task: $e';
+      notifyListeners();
+    }
   }
 
   /// Toggle status selesai task dengan [id].
-  void toggleComplete(String id) {
-    _tasks = [
-      for (final t in _tasks)
-        if (t.id == id) t.copyWith(isCompleted: !t.isCompleted) else t,
-    ];
-    notifyListeners();
+  Future<void> toggleComplete(String id) async {
+    final task = findById(id);
+    if (task == null) return;
+    _error = null;
+    try {
+      if (_repo != null) {
+        await _repo.save(task.copyWith(isCompleted: !task.isCompleted));
+        await loadTasks();
+      } else {
+        _tasks = [
+          for (final t in _tasks)
+            if (t.id == id) t.copyWith(isCompleted: !t.isCompleted) else t,
+        ];
+        notifyListeners();
+      }
+    } on ApiError catch (e) {
+      _error = e.message;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to toggle task completion: $e';
+      notifyListeners();
+    }
   }
 
   // ---- Search & Filter setters ---------------------------------------------

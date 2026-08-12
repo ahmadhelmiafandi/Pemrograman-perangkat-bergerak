@@ -62,6 +62,35 @@ class Task {
   String toString() =>
       'Task(id: $id, title: $title, priority: $priority, status: $status)';
 
+  /// Factory untuk mengonversi JSON `Map<String, dynamic>` menjadi objek [Task].
+  factory Task.fromJson(Map<String, dynamic> json) {
+    final rawIsCompleted = json['is_completed'];
+    final isCompletedBool = rawIsCompleted is bool
+        ? rawIsCompleted
+        : (rawIsCompleted is num ? rawIsCompleted != 0 : false);
+
+    return Task(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: (json['description'] as String?) ?? '',
+      dueDate: DateTime.parse(json['due_date'] as String),
+      priority: TaskPriority.values.byName(json['priority'] as String),
+      isCompleted: isCompletedBool,
+    );
+  }
+
+  /// Mengonversi objek [Task] menjadi JSON `Map<String, dynamic>`.
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'title': title,
+      'description': description,
+      'due_date': dueDate.toIso8601String(),
+      'priority': priority.name,
+      'is_completed': isCompleted,
+    };
+  }
+
   /// Data dummy seragam (>=20 task) untuk keperluan demo dan diagnosis.
   /// Tanggal dihitung relatif terhadap [now] agar overdue/pending stabil
   /// saat aplikasi dijalankan.

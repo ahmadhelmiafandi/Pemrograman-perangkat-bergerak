@@ -19,6 +19,30 @@ class TaskListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.homeTitle),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: ActionChip(
+              onPressed: () => context.read<TaskProvider>().toggleSimulateNetworkError(),
+              avatar: Icon(
+                provider.isOfflineMode ? Icons.cloud_off : Icons.cloud_done,
+                size: 16,
+                color: provider.isOfflineMode ? Colors.orange.shade900 : Colors.green.shade900,
+              ),
+              label: Text(
+                provider.isOfflineMode ? 'OFFLINE (SQLite)' : 'ONLINE',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: provider.isOfflineMode ? Colors.orange.shade900 : Colors.green.shade900,
+                ),
+              ),
+              backgroundColor: provider.isOfflineMode ? Colors.orange.shade100 : Colors.green.shade100,
+              padding: EdgeInsets.zero,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
