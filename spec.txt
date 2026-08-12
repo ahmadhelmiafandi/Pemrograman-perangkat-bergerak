@@ -1,0 +1,233 @@
+Assignment 1, Task Tracker Core
+1. Tujuan tugas
+Membuktikan secara individu bahwa kamu menguasai Dart, widget, navigasi, form, Provider, dan responsive UI,
+fondasi inti yang dipelajari di P01-P03. Tugas ini sengaja dirancang agar membedakan mahasiswa yang menulis
+dan memahami kode sendiri dari yang menyalin-tempel. Nilai aplikasi saja tidak cukup; kamu wajib menjelaskan
+lewat narasi tertulis bagaimana kamu memanfaatkan AI dan memverifikasi pemahamanmu.
+Assignment 1 adalah fondasi Assignment 2 (serialization + REST) dan Proyek Akhir (QA + release). Arsitektur dan
+state management yang kamu kunci di sini dipakai terus sampai akhir paket.
+Assignment ini dinilai sepenuhnya dari artefak yang kamu kumpulkan (source + narasi + screenshot +
+README). Tidak ada sesi presentasi atau demo.
+2. Starting point
+Titik mulai wajib: starter ../06-Starter-Code/p03-provider-crud/ setelah kamu menyelesaikan semua checkpoint
+P03 (CRUD + validator hijau). Dari situ kamu menambah fitur, bukan memulai dari kosong.
+Yang sudah kamu miliki dari starter:
+Model Task + enum TaskPriority / TaskStatus + copyWith + getDummyTasks() (P01).
+TaskCard reusable, task_list_screen dengan loading/error/empty, navigasi push / pop (P02).
+TaskProvider extends ChangeNotifier dengan CRUD inti
+( addTask / updateTask / deleteTask / toggleComplete ) + notifyListeners (P03).
+task_form_screen dengan validator title ( errTitleRequired , errTitleTooShort ).
+Tema Material 3 ( AppTheme ) dan konstanta ( AppStrings , AppColors ).
+Aturan batas starter: jangan mengubah Task class dan enum, signature metode CRUD, atau menambah
+package tanpa seizin dosen. Bila ragu, tanya dosen lebih dulu.
+3. Requirement (wajib)
+Semua butir di bawah wajib. Rubrik menilai indikator observable, yang terlihat dan bisa diverifikasi, bukan niat.
+3.1 Model dan data
+ Pakai model Task dari starter apa adanya: field id , title , description , dueDate , priority ,
+isCompleted , getter turunan status .
+ Data awal minimal 20 task dummy ( getDummyTasks() ) sebagai dataset yang cukup untuk membuktikan
+search/filter bekerja.
+3.2 Daftar, detail, add/edit, delete
+ List screen menampilkan seluruh task memakai TaskCard .
+ Detail screen: tap card membuka layar detail penuh (semua field tampil, termasuk priority, dueDate, dan status
+terhitung).
+ Add: FAB -> form (mode tambah) -> save -> task baru muncul di daftar secara reaktif.
+ Edit: dari detail atau card -> form (mode edit, field terisi) -> save -> data berubah di daftar dan detail.
+ Delete: delete meminta konfirmasi dialog sebelum menghapus (boleh Dismissible + confirmDismiss , atau
+tombol + dialog). Setelah confirm, task hilang reaktif.
+ Toggle completion: tap centang/checkbox -> status flip real-time; dua kali tap kembali semula (idempotent).
+3.3 Search dan filter
+ Search berdasarkan judul (title), case-insensitive, reaktif saat mengetik.
+ Filter status (pending / overdue / completed / all) yang reaktif.
+ Filter priority (low / medium / high / all) yang reaktif.
+ Search dan filter bekerja bersamaan (AND): hasil = task yang cocok query dan status dan priority terpilih.
+ Hasil filter benar pada data nyata, bukan hanya data dummy terbatas. Sertakan minimal satu task overdue dan
+satu completed untuk membuktikan.
+3.4 State management dan data flow
+ Seluruh data dan logika mutasi lewat TaskProvider extends ChangeNotifier .
+ Setiap mutasi wajib notifyListeners() , UI update tanpa setState manual di list/detail.
+ context.watch dipakai di build (berlangganan rebuild); context.read di handler aksi (sekali pakai). Tidak
+tertukar.
+ State UX terlihat: loading, error, dan empty state muncul pada kondisi yang sesuai (mis. hasil filter/search
+kosong -> empty state khusus, bukan layar blank).
+ Konsistensi lintas layar: edit di satu layar -> list dan detail ikut update otomatis.
+3.5 Form validation
+ Title wajib, tidak boleh kosong/whitespace -> AppStrings.errTitleRequired .
+ Title minimal 3 karakter (setelah trim) -> AppStrings.errTitleTooShort .
+ Pesan error jelas dan muncul di bawah field; form tidak submit bila invalid.
+ (Wajib tambahan Assignment 1) Validasi due date tidak di masa lalu saat mode tambah. Boleh masa lalu saat
+edit. Sertakan konstanta AppStrings.errDueDateInPast (atau setara) untuk pesannya.
+3.6 Responsive UI (Material 3)
+ Tema Material 3 konsisten ( AppTheme ).
+ Portrait ponsel: tampil 1 kolom, tidak ada overflow horizontal/vertikal.
+ Landscape ponsel: layout menyesuaikan (mis. grid 2 kolom saat lebar ≥ 600 via LayoutBuilder ), tidak
+overflow saat rotasi.
+ Rotasi cepat portrait/landscape tidak merusak state atau menghilangkan data.
+3.7 Tooling
+ flutter analyze bersih, atau setiap warning/info tersisa dijelaskan di README beserta alasannya.
+ flutter test lulus (minimal test bawaan starter masih hijau; menambah test = bonus penilaian, bukan syarat
+gate).
+4. Non-goal (tidak boleh jadi syarat / jangan kerjakan di Assignment 1)
+Hal-hal berikut di luar lingkup Assignment 1. Kerjakan di Assignment 2/Proyek Akhir. Mencantumkannya sebagai
+requirement wajib akan didiskualifikasi dari rubrik Assignment 1:
+SQLite / persistence database (data boleh hilang saat restart, itu topik P04 dan opsional di Assignment 2).
+REST API / backend / network call (topik P05/Assignment 2).
+Fitur device (camera, image picker, file), topik P06/Proyek Akhir.
+Menulis unit/widget test sendiri sebagai gate (test bawaan starter tetap wajib hijau; menambah test = bonus.
+Gate ≥3 unit + ≥2 widget ada di Proyek Akhir).
+Build release APK / signing / demo individual (topik P07/Proyek Akhir).
+Package tambahan di luar provider + flutter_lints tanpa izin dosen (state tetap ChangeNotifier +
+Provider, bukan Riverpod/BLoC).
+Kamu boleh menambah fitur ekstra setelah semua gate wajib tercapai, tapi fitur ekstra tidak menggantikan gate
+wajib dan tidak menambah poin di luar kolom "Sangat Baik" rubrik.
+5. Deliverable (yang dikumpulkan)
+#
+Artefak
+Wajib
+Catatan
+1
+Source code (ZIP) + repo
+URL bila ada
+wajib
+Bisa di-build di mesin bersih setelah flutter create .
+2
+Narasi Pemanfaatan AI
+(800-1200 kata)
+wajib
+Bagian §7 Template-Submission-README.md , lihat §5.1 di
+bawah.
+3
+Screenshot portrait +
+landscape (minimal 2
+orientasi)
+wajib
+Buktikan tidak overflow. Sertakan screenshot empty/search-no-
+result bila bisa.
+4
+Screenshot flow utama
+wajib
+CRUD (add/edit/delete+konfirmasi), toggle, search+filter aktif
+bersamaan, pesan validasi form.
+5
+README.md (pakai
+Template-Submission-
+README.md )
+wajib
+Run instruction, fitur, arsitektur singkat, known limitation, bukti
+flutter analyze + flutter test .
+6
+AI Interaction Log
+bila
+pakai
+AI
+Template: ../01-Orientasi/Template-AI-Interaction-Log.md .
+Tidak melampirkan padahal memakai AI = pelanggaran
+kebijakan.
+Format submission mengikuti keputusan dosen. Default paket: source ZIP + README (berisi narasi) + screenshot.
+5.1 Narasi Pemanfaatan AI
+Tulis 800-1200 kata dalam bahasa Indonesia, di bagian §7 README (atau file NARASI-AI.md terpisah). Narasi ini
+yang dinilai sebagai bukti pemahamanmu, jadi tulis dengan jujur dan spesifik, bukan normatif. Wajib memuat empat
+hal:
+1. Strategi pemanfaatan AI. Di bagian mana kamu memakai AI dan di bagian mana sengaja tidak. Bagaimana
+kamu menyusun prompt agar jawabannya berguna (konteks apa yang kamu sertakan, bagaimana kamu
+mempersempit pertanyaan). Sertakan minimal satu contoh prompt konkret milikmu sendiri.
+2. Keputusan menerima/menolak saran AI. Minimal dua kasus konkret: satu saran yang kamu pakai dan alasan
+teknisnya, satu saran yang kamu tolak beserta alasannya (mis. AI menyarankan setState padahal state harus
+lewat Provider, atau solusi yang membuat flutter analyze merah). Kasus penolakan adalah bukti terkuat
+bahwa kamu paham, bukan menempel.
+3. Cara verifikasi pemahaman. Bagaimana kamu memastikan kode yang dibantu AI benar-benar benar dan kamu
+kuasai: output flutter analyze / flutter test , uji manual di emulator, atau menjelaskan ulang alur ke diri
+sendiri. Sertakan bukti (potongan output/screenshot).
+4. Penjelasan satu alur end-to-end dengan kata sendiri. Pilih satu: alur search + filter AND dari input pengguna
+sampai daftar ter-render, atau alur add task dari tombol FAB sampai kartu baru muncul. Jelaskan urutan
+context.watch / context.read , mutasi di provider, notifyListeners() , dan rebuild UI.
+Bila tidak memakai AI sama sekali: narasi tetap wajib. Tulis alasan memilih tidak memakai AI, sumber belajar
+yang kamu pakai sebagai gantinya, lalu kerjakan poin 3 dan 4 seperti biasa. Panjang boleh 500-800 kata. Tidak
+ada penalti.
+6. Aturan AI (Assignment 1)
+Assignment 1 dibuka setelah P03, jadi berlaku kebijakan AI P1-P3:
+Aspek
+Boleh
+Tidak boleh
+Penjelasan syntax, konsep widget, Provider, ChangeNotifier
+,
+Diagnosis error (mis. "kenapa Row saya overflow?")
+,
+Menulis core logic CRUD/search/filter/validator tanpa analisis sendiri
+,
+Menulis seluruh implementasi tugas dari prompt
+,
+Wajib bila memakai AI:
+1. Isi ../01-Orientasi/Template-AI-Interaction-Log.md untuk setiap interaksi: tujuan, prompt, ringkasan
+respons, perubahan yang dipilih/ditolak, dan verifikasi pemahaman (jelaskan ulang dengan kata sendiri + bukti
+flutter test / flutter analyze /output UI).
+2. Tulis Narasi Pemanfaatan AI (§5.1). Narasi yang dangkal, generik, atau tidak cocok dengan kode yang
+dikumpulkan -> poin indikator terkait dapat dibatalkan meski source benar (lihat Rubrik-Assignment-01.md gate
+dimensi E).
+Peringatan akademik: menyalin solusi teman atau menempel hasil AI tanpa pemahaman termasuk pelanggaran.
+Rubrik punya indikator khusus untuk mendeteksi ini lewat kualitas narasi dan kecocokannya dengan source.
+7. Command verifikasi (jalankan sebelum kumpul)
+# 1. Dari folder proyekmu (hasil copy starter p03):
+flutter pub get
+flutter analyze # bersih, atau catat warning di README
+flutter test # minimal test starter hijau
+# 2. Jalankan dan uji manual:
+flutter run
+# Uji: loading -> list; FAB add; tap edit; delete+confirm; toggle;
+# search title; filter status; filter priority; kombinasi AND;
+# rotasi portrait/landscape; validasi title kosong/<3/due date lampau.
+# 3. Verifikasi file deliverable ada:
+test -f README.md
+test -f../01-Orientasi/Template-AI-Interaction-Log.md # referensi template AI log
+Checklist sebelum submit (centang semua):
+ Semua requirement §3 tercapai dan teruji manual.
+ flutter analyze bersih / warning dijelaskan.
+ flutter test lulus (test bawaan starter hijau).
+ Narasi Pemanfaatan AI 800-1200 kata ditulis, memuat keempat poin §5.1.
+ Screenshot portrait + landscape ada.
+ Screenshot flow utama (CRUD, toggle, search+filter, validasi) ada.
+ README pakai template submission.
+ AI log dilampirkan bila memakai AI.
+8. Rubrik dan bobot
+Penilaian memakai Rubrik-Assignment-01.md (5 dimensi, total 100 poin):
+Dimensi
+Bobot
+Inti penilaian
+Fungsionalitas
+25
+model, CRUD lengkap, search+filter AND, toggle idempotent
+State & data flow
+25
+Provider reaktif, watch/read benar, konsistensi lintas layar
+UI & responsive
+20
+Material 3, tidak overflow portrait+landscape, state UX, validasi
+Kualitas kode & tooling
+15
+flutter analyze , flutter test , naming/struktur, immutability
+Narasi AI & dokumentasi
+15
+narasi 4 poin, AI log lengkap, README rapi
+Skala 0-4 per indikator, dikonversi ke poin per dimensi. Indikator gate (bertanda ) yang gagal dapat membatalkan poin
+turunan. Detail di Rubrik-Assignment-01.md .
+9. Deadline (placeholder, diisi dosen)
+Item
+Tanggal
+Assignment 1 dibuka
+[diisi dosen, default: akhir sesi P03]
+Assignment 1 dikumpulkan
+[diisi dosen, default: sebelum sesi P04]
+Tenggat final mengikuti ../00-Planning/Runbook-Dosen.md bagian 5 dan pengumuman dosen. Keterlambatan
+mengikuti aturan prodi.
+10. Tips pendekatan (saran, bukan syarat)
+1. Mulai dari starter P03 yang sudah hijau. Jangan dari awal.
+2. Kerjakan search + filter pertama di provider (field _searchQuery , _statusFilter , _priorityFilter + getter
+filteredTasks + notifyListeners ). Ini sering jadi sumber bug AND logic.
+3. Detail screen cukup read-only dulu; tombol edit arahkan ke form yang sama.
+4. Responsive: bungkus list dengan LayoutBuilder ; crossAxisCount = constraints.maxWidth >= 600 ? 2 :
+1 untuk GridView , atau ganti ListView / GridView kondisional.
+5. Validasi due date: bandingkan dueDate dengan DateTime.now() di validator; ingat komponen waktu
+(bandingkan tanggal saja bila hanya tanggal).
+6. Tulis narasi sambil kerja, bukan setelahnya. Catat di AI log tiap kali memakai AI, terutama saran yang kamu
+tolak beserta alasannya. Saat menyusun narasi §5.1, bahan tinggal dirangkai, dan hasilnya jauh lebih spesifik
+daripada ditulis dari ingatan semalam sebelum tenggat.
